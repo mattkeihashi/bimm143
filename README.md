@@ -1,2 +1,2 @@
 # bimm143
-A collection of lab projects for BIMM 143
+This repo is for my UCSD bioinformatics class. 
