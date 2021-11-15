@@ -245,7 +245,7 @@ library(bio3d.view)
 library(rgl)
 
 # Create visualization
-view.pdbs(pdbs)
+#view.pdbs(pdbs)
 ```
 
 ## Principal Component Analysis
