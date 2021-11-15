@@ -1,0 +1,320 @@
+---
+title: "Structural Bioinformatics (Pt. 1)"
+author: "Matt Hashimoto"
+date: "11/14/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## PDB Statistics
+
+We can examine a .csv file downloaded from the PDB to determine statistics about
+the protein data present in the database. First, let's create a matrix with the
+data:
+
+```{r}
+# Store PDB summary data in a matrix
+pdbSummary <- read.csv2("Data Export Summary.csv", sep = ",")
+pdbSummary
+```
+
+#### Q1
+
+"What percentage of structures in the PDB are solved by X-Ray and
+Electron Microscopy?"
+
+To find this percentage, we can take the sums of the X.ray and EM columns and
+divide it by the total sum:
+
+```{r}
+# Sum of X.ray and EM columns divided by total, times 100 to represent percent
+sum(pdbSummary$X.ray, pdbSummary$EM) / sum(pdbSummary$Total) * 100
+```
+
+Thus, the percentage of structures in the PDB solved by X-Ray and Electron
+Microscopy is 92.48%.
+
+#### Q2
+
+"What proportion of structures in the PDB are protein?"
+
+To find this percentage, we can take the sum of the Protein (only) row and
+divide it by the total sum:
+
+```{r}
+# Sum of Protein (only) total divided by total
+sum(pdbSummary$Total[1]) / sum(pdbSummary$Total)
+```
+
+Thus, the proportion of structures in the PDB that are protein is 0.8734.
+
+#### Q3
+
+"Type HIV in the PDB website search box on the home page and determine how many
+HIV-1 protease structures are in the current PDB?"
+
+Viewing the PDB query results for "HIV" and narrowing the search results by 
+ensuring the macromolecule name includes "protease" yields 819 hits.
+
+## Getting to Know VMD
+
+#### Q4
+
+"Water molecules normally have 3 atoms. Why do we see just one atom per water
+molecule in this structure?"
+
+The bead display method displays residues/sidechains as a single sphere to
+simplify things. For example, if we were to select "bead" display for the MK1
+substrate, it would appear as one single large sphere.
+
+#### Q5
+
+"There is a conserved water molecule in the binding site. Can you identify this
+water molecule? What residue number does this water molecule have (see note
+below)?"
+
+The water molecule in the binding site appears to be on residue 308.
+
+## Sequence Viewer Extension
+
+#### Q6
+
+"As you have hopefully observed HIV protease is a homodimer (i.e. it is composed
+of two identical chains). With the aid of the graphic display and the sequence
+viewer extension can you identify secondary structure elements that are likely
+to only form in the dimer rather than the monomer?"
+
+Yes, there is a pair of parallel beta sheets that cannot exist outside of the
+dimer form. These are present in both chains in the high 90s (residue number).
+In monomer form, these beta sheets exist alone, which is somewhat unstable.
+However, in dimer form, they are parallel, stabilizing one another.
+
+## Introduction to Bio3D in R
+
+First, let's load the Bio3D library into our session:
+
+```{r}
+# Load the Bio3D library
+library(bio3d)
+```
+
+## Reading PDB File Data into R
+
+We can read a file from the PDB database directly into R:
+
+```{r}
+# Load the PDB file associated with 1HSG
+pdb <- read.pdb("1hsg")
+```
+
+Next we can examine the contents of this file:
+
+```{r}
+# View loaded PDB file
+pdb
+```
+
+#### Q7
+
+"How many amino acid residues are there in this PDB object?"
+
+There are 198 protein residues and 128 non-protein residues, for a total of 326
+residues.
+
+#### Q8
+
+"Name one of the two non-protein residues?"
+
+MK1 is a non-protein residue.
+
+#### Q9
+
+"How many protein chains are in this structure?"
+
+This structure has 2 chains.
+
+We can take a quick look at the attributes of the PDB object:
+
+```{r}
+# Check attributes
+attributes(pdb)
+```
+
+```{r}
+# Access the atom attribute
+head(pdb$atom)
+```
+
+## Setup
+
+#### Q10
+
+"Which of the packages above is found only on BioConductor and not CRAN?"
+
+The msa package is only found on BioConductor and not CRAN.
+
+#### Q11
+
+"Which of the above packages is not found on BioConductor or CRAN?"
+
+The bio3d-view package is not found on BioConductor or CRAN.
+
+#### Q12
+
+"True or False? Functions from the devtools package can be used to install
+packages from GitHub and BitBucket?"
+
+True
+
+## Search and Retrieve ADK Structures
+
+First, let's load in the Adenylate kinase sequence for chain A:
+
+```{r}
+# Load the Bio3D library and obtain sequence for chain A of 1AKE
+library(bio3d)
+aa <- get.seq("1ake_A")
+
+# Check sequence
+aa
+```
+
+#### Q13
+
+"How many amino acids are in this sequence, i.e. how long is this sequence?"
+
+This sequence is 214 amino acids long.
+
+The next step is to perform a BLAST search using our sequence:
+
+```{r}
+# BLAST or HMMER search 
+b <- blast.pdb(aa)
+```
+
+Let's narrow down the search a bit to only include E. coli results:
+
+```{r}
+# Plot a summary of search results
+hits <- plot(b)
+```
+
+We will thus focus only on the black results.
+
+```{r}
+# List out some 'top hits'
+head(hits$pdb.id)
+```
+
+Now that we have our top hits, we can retrieve the associated PDB files:
+
+```{r}
+# Download releated PDB files
+files <- get.pdb(hits$pdb.id, path = "pdbs", split = TRUE, gzip = TRUE)
+```
+
+## Align and Superpose Structures
+
+We can now begin to align the PDB structures we found and fit them:
+
+```{r}
+# Align related PDBs
+pdbs <- pdbaln(files, fit = TRUE, exefile="msa")
+```
+
+```{r}
+# Vector containing PDB codes for figure axis
+ids <- basename.pdb(pdbs$id)
+
+# Draw schematic alignment
+plot(pdbs, labels = ids)
+```
+
+## Viewing Our Superposed Structures
+
+We can now view our superposed structures in 3D space:
+
+```{r}
+# Load necessary libraries
+library(bio3d.view)
+library(rgl)
+
+# Create visualization
+view.pdbs(pdbs)
+```
+
+## Principal Component Analysis
+
+We can perform PCA on the group of PDB structures we obtained earlier:
+
+```{r}
+# Perform PCA
+pc.xray <- pca(pdbs)
+plot(pc.xray)
+```
+
+Next, calculating RMSD values can assist us in clustering analysis:
+
+```{r}
+# Calculate RMSD
+rd <- rmsd(pdbs)
+
+# Structure-based clustering
+hc.rd <- hclust(dist(rd))
+grps.rd <- cutree(hc.rd, k = 3)
+
+plot(pc.xray, 1:2, col = "grey50", bg = grps.rd, pch = 21, cex = 1)
+```
+
+## Normal Mode Analysis
+
+Lastly, we can analyze either a single PDB object or a group of PDB objects
+using NMA, allowing us to investigate flexibility profiles of protein
+structures:
+
+```{r}
+# NMA of all structures
+modes <- nma(pdbs)
+
+# Graphical analysis
+plot(modes, pdbs, col = grps.rd)
+```
+
+#### Q14
+
+"What do you note about this plot? Are the black and colored lines similar or
+different? Where do you think they differ most and why?"
+
+There are two distinct groups (black and colored) that are similar to one
+another, but different from all those in the other gorup. The black and colored
+lines are decently similar in some areas and quite different in others. They
+likely differ near their binding sites, as conformational changes can vastly
+impact flexibility at and near those regions.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
