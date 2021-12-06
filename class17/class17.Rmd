@@ -1,0 +1,450 @@
+---
+title: "Vaccination Rate Mini Project"
+author: "Matt Hashimoto"
+date: "12/3/2021"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Getting Started
+
+Let's first start by loading our data from the .csv file:
+
+```{r}
+# Import vaccination data
+vax <- read.csv("covid19vaccinesbyzipcode_test.csv")
+head(vax)
+```
+
+#### Q1
+
+"What column details the total number of people fully vaccinated?"
+
+Column 9, titled "persons_fully_vaccinated".
+
+#### Q2
+
+"What column details the Zip code tabulation area?"
+
+Column 2, titled "zip_code_tabulation_area".
+
+#### Q3
+
+"What is the earliest date in this dataset?"
+
+This can be found by looking at the first entry in the "as_of_date" column:
+
+```{r}
+# View the first entry in the as_of_date column
+vax$as_of_date[1]
+```
+
+Thus, the earliest date is January 5th, 2021.
+
+#### Q4
+
+"What is the latest date in this dataset?"
+
+Similarly to the last question, this can be found by looking at the last entry
+in the "as_of_date" column:
+
+```{r}
+vax$as_of_date[length(vax$as_of_date)]
+```
+
+Thus, the latest date is November 30th, 2021.
+
+Let's try calling the skim function to get a better idea of what's in the
+dataset:
+
+```{r}
+# Call the skim function
+skimr::skim(vax)
+```
+
+#### Q5
+
+"How many numeric columns are in this dataset?"
+
+As seen from the skim results, there are 9 numeric columns.
+
+#### Q6
+
+"Note that there are “missing values” in the dataset. How many NA values are
+there in the persons_fully_vaccinated column?"
+
+The "n_missing" column shows that there are 8472 NA values in the
+"persons_fully_vaccinated" column.
+
+#### Q7
+
+"What percent of persons_fully_vaccinated values are missing (to 2 significant
+figures)?"
+
+```{r}
+# 8472 missing values out of 84672
+8472 / 84672
+```
+
+10% of the values are missing.
+
+#### Q8
+
+"[Optional]: Why might this data be missing?"
+
+This data may be missing because there is no method of collecting data from
+specific zip codes. As mentioned earlier in the lab document, certain
+institutions or organizations may have no obligation or reason to report their
+vaccination data, and certain zip codes may be entirely managed by these
+institutions or organizations.
+
+## Working With Dates
+
+Let's use the lubridate library to help us deal with dates:
+
+```{r}
+library(lubridate)
+```
+
+Check today's date:
+
+```{r}
+today()
+```
+
+Let's convert our dates into a lubridate format to make analysis easier:
+
+```{r}
+# Speciffy that we are using the Year-mont-day format
+vax$as_of_date <- ymd(vax$as_of_date)
+```
+
+Now we can use lubridate functions to check things like how many days have
+passed since the first data was collected:
+
+```{r}
+# Check time since first measurement
+today() - vax$as_of_date[1]
+```
+
+We can also calculate how much time the data spans:
+
+```{r}
+# Check time span
+vax$as_of_date[nrow(vax)] - vax$as_of_date[1]
+```
+
+#### Q9
+
+"How many days have passed since the last update of the dataset?"
+
+```{r}
+today() - vax$as_of_date[nrow(vax)]
+```
+
+3 days have passed since the last update.
+
+#### Q10
+
+"How many unique dates are in the dataset (i.e. how many different dates are
+detailed)?"
+
+```{r}
+length(unique(vax$as_of_date))
+```
+
+There are 48 unique dates in the dataset.
+
+## Working With ZIP Codes
+
+Let's load in the zipcodeR library:
+
+```{r}
+# Load the zipcodeR library
+library(zipcodeR)
+```
+
+Next let's find the centroid of the 92037 zip code area (UCSD):
+
+```{r}
+# Find centroid of the 92037 zip code
+geocode_zip('92037')
+```
+
+We can also calculate the distance between any two zip codes in miles:
+
+```{r}
+# Distance in miles
+zip_distance('92037','92109')
+```
+
+We can also pull census data about zip codes:
+
+```{r}
+# Pull census data
+reverse_zipcode(c('92037', "92109") )
+```
+
+We can use this to pull census data for all the zip codes we may be interested
+in:
+
+```{r}
+# Pull data for all ZIP codes in the dataset
+#zipdata <- reverse_zipcode( vax$zip_code_tabulation_area )
+```
+
+## Focus on the San Diego Area
+
+We can restrict ourselves to San Diego county using base R:
+
+```{r}
+# Subset to San Diego county only areas
+sd <- vax[vax$county == "San Diego",]
+```
+
+Or we could use the dplyr library:
+
+```{r}
+# Load library
+library(dplyr)
+
+# Filter just results from SD
+sd <- filter(vax, county == "San Diego")
+nrow(sd)
+```
+
+The dplyr package is more convenient when trying to subset across multiple
+criteria:
+
+```{r}
+# All SD counties with populations over 10000
+sd.10 <- filter(vax, county == "San Diego" &
+                age5_plus_population > 10000)
+```
+
+#### Q11
+
+"How many distinct zip codes are listed for San Diego County?"
+
+```{r}
+# Check for uniqueness
+length(unique(sd$zip_code_tabulation_area))
+```
+
+107 distinct zip codes are listed for SD county.
+
+#### Q12
+
+"What San Diego County Zip code area has the largest 12 + Population in this
+dataset?"
+
+```{r}
+# Check for max population value
+sd$zip_code_tabulation_area[which.max(sd$age12_plus_population)]
+```
+
+The 92154 area has the largest 12+ population.
+
+```{r}
+# All data for Nov 16
+sd.nov16 <- filter(vax, county == "San Diego" &
+                as_of_date == "2021-11-16")
+```
+
+#### Q13
+
+"What is the overall average “Percent of Population Fully Vaccinated” value for
+all San Diego “County” as of “2021-11-16”?"
+
+```{r}
+# Average percent of population fully vaccinated
+mean(sd.nov16$percent_of_population_fully_vaccinated, na.rm = TRUE)
+```
+
+The average percent of population fully vaccinated is 67.22%.
+
+#### Q14
+
+"Using either ggplot or base R graphics make a summary figure that shows the
+distribution of Percent of Population Fully Vaccinated values as of
+“2021-11-16”?"
+
+```{r}
+# Plot distribution of percent fully vaccinated
+hist(sd.nov16$percent_of_population_fully_vaccinated,
+     main = "Histogram of Vaccination Rates Across San Diego County",
+     xlab = "Percent of Population Fully Vaccinated on 2021-11-16",
+     col = "gray")
+```
+
+## Focus on UCSD/La Jolla
+
+Let's filter to the UCSD area zip code:
+
+```{r}
+# Filter to UCSD zip code and check 5+ population
+ucsd <- filter(sd, zip_code_tabulation_area == "92037")
+ucsd[1,]$age5_plus_population
+```
+
+#### Q15
+
+"Using ggplot make a graph of the vaccination rate time course for the 92037 ZIP
+code area:"
+
+```{r}
+# Load ggplot library
+library(ggplot2)
+
+# Use ggplot to create a graph
+ggplot(ucsd) +
+  aes(ucsd$as_of_date,
+      ucsd$percent_of_population_fully_vaccinated) +
+  geom_point() +
+  geom_line(group = 1) +
+  ylim(c(0,1)) +
+  labs(x = "Date", y = "Percent Vaccinated") +
+  ggtitle("Vaccination Rate for La Jolla, CA 92037")
+```
+
+## Comparing 92037 to Other Similarly Sized Areas
+
+Let's filter our vaccination data once again to data at least as large as the
+population in 92037:
+
+```{r}
+# Subset to all CA areas with a population as large as 92037
+vax.36 <- filter(vax, age5_plus_population > 36144 &
+                as_of_date == "2021-11-16")
+
+head(vax.36)
+```
+
+#### Q16
+
+"Calculate the mean “Percent of Population Fully Vaccinated” for ZIP code areas
+with a population as large as 92037 (La Jolla) as_of_date “2021-11-16”. Add this
+as a straight horizontal line to your plot from above with the geom_hline()
+function?"
+
+```{r}
+# Calculate mean
+mean(vax.36$percent_of_population_fully_vaccinated, na.rm = TRUE)
+```
+
+```{r}
+# Add line to plot
+ggplot(ucsd) +
+  aes(ucsd$as_of_date,
+      ucsd$percent_of_population_fully_vaccinated) +
+  geom_point() +
+  geom_line(group = 1) +
+  ylim(c(0,1)) +
+  labs(x = "Date", y = "Percent Vaccinated") +
+  ggtitle("Vaccination Rate for La Jolla, CA 92037") +
+  geom_hline(yintercept = mean(vax.36$percent_of_population_fully_vaccinated,
+                      na.rm = TRUE),
+             color = "red", linetype = "dashed")
+```
+
+#### Q17
+
+"What is the 6 number summary (Min, 1st Qu., Median, Mean, 3rd Qu., and Max) of
+the “Percent of Population Fully Vaccinated” values for ZIP code areas with a
+population as large as 92037 (La Jolla) as_of_date “2021-11-16”?"
+
+```{r}
+# Use fivenum to get min, 1st qu, median, 3rd qu, and max
+fivenum(vax.36$percent_of_population_fully_vaccinated)
+
+# Use mean()
+mean(vax.36$percent_of_population_fully_vaccinated)
+```
+
+#### Q18
+
+"Using ggplot generate a histogram of this data."
+
+```{r}
+ggplot(vax.36) +
+  aes(vax.36$percent_of_population_fully_vaccinated) +
+  geom_histogram() +
+  xlim(0,1) +
+  labs(x = "Percent Vaccinated")
+```
+
+#### Q19
+
+"Is the 92109 and 92040 ZIP code areas above or below the average value you
+calculated for all these above?"
+
+```{r}
+# The average value
+mean(vax.36$percent_of_population_fully_vaccinated)
+
+# Check 92109
+vax %>% filter(as_of_date == "2021-11-16") %>%  
+  filter(zip_code_tabulation_area=="92109") %>%
+  select(percent_of_population_fully_vaccinated)
+
+# Check 92040
+vax %>% filter(as_of_date == "2021-11-16") %>%  
+  filter(zip_code_tabulation_area=="92040") %>%
+  select(percent_of_population_fully_vaccinated)
+```
+
+As you can see, the 92109 zip code is above the average vaccination percentage,
+while the 92040 zip code is below.
+
+#### Q20
+
+"Finally make a time course plot of vaccination progress for all areas in the
+full dataset with a age5_plus_population > 36144."
+
+```{r}
+# Filter data for all days
+vax.36.all <- filter(vax, age5_plus_population > 36144)
+
+# Plot with ggplot
+ggplot(vax.36.all) +
+  aes(vax.36.all$as_of_date,
+      vax.36.all$percent_of_population_fully_vaccinated, 
+      group = zip_code_tabulation_area) +
+  geom_line(alpha = 0.2, color = "blue") +
+  ylim(0,1) +
+  labs(x = "Date", y = "Percent Vaccinated",
+       title = "Vaccination Rate Across California",
+       subtitle = "Only areas with a population above 36k are shown.") +
+  geom_hline(yintercept = mean(vax.36$percent_of_population_fully_vaccinated,
+                               na.rm = TRUE),
+             linetype = "dashed")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
