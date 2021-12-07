@@ -1,0 +1,100 @@
+---
+title: "Class 19 HW"
+author: "Matt Hashimoto"
+date: "12/6/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Population Scale Analysis
+
+#### Q13
+
+"Read this file into R and determine the sample size for each genotype and their 
+corresponding median expression levels for each of these genotypes."
+
+```{r}
+# Read file from url
+finaldata <- read.table(url("https://bioboot.github.io/bggn213_W19/class-material/rs8067378_ENSG00000172057.6.txt"))
+
+# Check summary of the overall data
+summary(finaldata)
+```
+
+```{r}
+# Create new tables based on genotype
+AAtable <- finaldata[-which(finaldata$geno != "A/A"),]
+AGtable <- finaldata[-which(finaldata$geno != "A/G"),]
+GGtable <- finaldata[-which(finaldata$geno != "G/G"),]
+
+# Check new tables
+summary(AAtable)
+summary(AGtable)
+summary(GGtable)
+```
+
+The sample size of A/A is 108, A/G is 233, and G/G is 121. The median expression
+level for A/A is 31.25, A/G is 25.065, G/G is 20.074.
+
+#### Q14
+
+"Generate a boxplot with a box per genotype, what could you infer from the
+relative expression value between A/A and G/G displayed in this plot? Does the
+SNP effect the expression of ORMDL3?"
+
+```{r}
+boxlist <- list("A/A" = AAtable$exp, "A/G" = AGtable$exp, "G/G" = GGtable$exp)
+boxplot(boxlist,
+        main = "Affect of Genotype on Expression Level in ORMDL3",
+        xlab = "Genotype",
+        ylab = "Expression Level",
+        notch = TRUE,
+        col = c("red", "green", "blue"))
+```
+
+From this box plot, it is reasonable to infer that genotype does significantly
+affect expression levels of the ORMDL3 gene. The median value for the G/G data
+falls well outside the IQR of the A/A data, indicating signficance. Thus, there
+is strong evidence that the associated SNP affects the expression of ORMDL3. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
